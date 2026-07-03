@@ -1,0 +1,16 @@
+{
+  "name": "CrowdVision AI",
+  "short_name": "CrowdVision",
+  "description": "Real-Time Crowd Safety Intelligence",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#020604",
+  "background_color": "#020604",
+  "icons": [
+    {
+      "src": "/crowdvision-icon.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml"
+    }
+  ]
+}
