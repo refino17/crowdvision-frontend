@@ -42,17 +42,58 @@ function StatusItem({ label, value, tone = "default" }) {
   );
 }
 
-function PresentationMetric({ label, value, tone = "default" }) {
+function CameraIntegrityPanel({ health = {} }) {
+  const severity = String(health?.severity || "Info").toLowerCase();
+  const tamperDetected = Boolean(health?.tamper_detected);
+
   return (
-    <div className={`presentation-metric tone-${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className={`panel mini-panel camera-integrity-panel severity-${severity}`}>
+      <p className="section-kicker">Camera Integrity</p>
+      <h2>{tamperDetected ? "Tamper Warning" : "Signal Healthy"}</h2>
+
+      <div className="summary-list">
+        <p>
+          <span>Status</span>
+          <strong>{health?.status || "Waiting"}</strong>
+        </p>
+
+        <p>
+          <span>Signal</span>
+          <strong>{health?.signal_quality || "Unknown"}</strong>
+        </p>
+
+        <p>
+          <span>Tamper Type</span>
+          <strong>{health?.tamper_type || "None"}</strong>
+        </p>
+
+        <p>
+          <span>Brightness</span>
+          <strong>{displayNumber(health?.brightness ?? 0, 1)}</strong>
+        </p>
+
+        <p>
+          <span>Blur Score</span>
+          <strong>{displayNumber(health?.blur_score ?? 0, 1)}</strong>
+        </p>
+
+        <p>
+          <span>Frozen</span>
+          <strong>{displayNumber(health?.frozen_seconds ?? 0, 1)}s</strong>
+        </p>
+      </div>
+
+      <div className="privacy-note">
+        {health?.message || "Frame quality, obstruction, blur, glare, and frozen-frame checks are active."}
+      </div>
     </div>
   );
 }
 
 export default function MonitoringPage({ data = {} }) {
   const [presentationOpen, setPresentationOpen] = useState(false);
+  const [presentationMode, setPresentationMode] = useState("command");
+  const [presentationFit, setPresentationFit] = useState("fit");
 
   const {
     engineStatus = {},
@@ -77,6 +118,11 @@ export default function MonitoringPage({ data = {} }) {
     activeCamera?.tracking ||
     cameraHealth?.tracking ||
     latestEvent?.tracking ||
+    {};
+
+  const cameraIntegrity =
+    activeCamera?.camera_health ||
+    cameraHealth?.camera_health ||
     {};
 
   const engineRunning = Boolean(engineStatus?.running);
@@ -122,7 +168,8 @@ export default function MonitoringPage({ data = {} }) {
   const incidentActive = Boolean(latestIncident);
   const anomalyActive = Boolean(latestAnomaly);
 
-  async function openPresentationMode() {
+  async function openPresentationMode(mode = "command") {
+    setPresentationMode(mode);
     setPresentationOpen(true);
 
     try {
@@ -130,7 +177,10 @@ export default function MonitoringPage({ data = {} }) {
         await document.documentElement.requestFullscreen();
       }
     } catch (error) {
-      console.warn("Browser fullscreen was blocked, but CrowdVision video-only presentation mode is still open.", error);
+      console.warn(
+        "Browser fullscreen was blocked, but CrowdVision presentation mode is still open.",
+        error
+      );
     }
   }
 
@@ -161,14 +211,32 @@ export default function MonitoringPage({ data = {} }) {
     if (!presentationOpen) return undefined;
 
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        setPresentationOpen(false);
+      const key = event.key.toLowerCase();
+
+      if (key === "escape") {
+        closePresentationMode();
+      }
+
+      if (key === "c") {
+        setPresentationMode("clean");
+      }
+
+      if (key === "m") {
+        setPresentationMode("command");
+      }
+
+      if (key === "f") {
+        setPresentationFit((currentFit) => (currentFit === "fit" ? "fill" : "fit"));
+      }
+
+      if (key === "r" && typeof fetchDashboardData === "function") {
+        fetchDashboardData();
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [presentationOpen]);
+  }, [presentationOpen, fetchDashboardData]);
 
   useEffect(() => {
     if (!presentationOpen) return undefined;
@@ -183,6 +251,7 @@ export default function MonitoringPage({ data = {} }) {
 
   const densityTone = String(latestDensity).toLowerCase();
   const alertMessage = latestEvent?.alert_message || cameraHealth?.alert || "No active alert";
+  const currentSourceLabel = formatSourceLabel(activeProfile);
 
   return (
     <>
@@ -208,7 +277,20 @@ export default function MonitoringPage({ data = {} }) {
             }
             action={
               <div className="monitoring-head-actions">
-                <button type="button" className="presentation-button" onClick={openPresentationMode}>
+                <button
+                  type="button"
+                  className="presentation-button clean-presentation-button"
+                  onClick={() => openPresentationMode("clean")}
+                  title="Open a clean video-only presentation view"
+                >
+                  Clean View
+                </button>
+                <button
+                  type="button"
+                  className="presentation-button"
+                  onClick={() => openPresentationMode("command")}
+                  title="Open fullscreen command view with metrics"
+                >
                   Full Screen
                 </button>
                 <button type="button" onClick={fetchDashboardData}>
@@ -246,12 +328,17 @@ export default function MonitoringPage({ data = {} }) {
           </div>
 
           <div className="operator-status-strip">
-            <StatusItem label="Source" value={formatSourceLabel(activeProfile)} tone="cyan" />
+            <StatusItem label="Source" value={currentSourceLabel} tone="cyan" />
             <StatusItem label="People" value={peopleCount} tone="green" />
             <StatusItem label="Occupancy" value={occupancy} tone="yellow" />
             <StatusItem label="Density" value={latestDensity} tone={densityTone} />
             <StatusItem label="FPS" value={displayNumber(fps, 1)} />
             <StatusItem label="AI FPS" value={displayNumber(aiFps, 2)} />
+            <StatusItem
+              label="Integrity"
+              value={cameraIntegrity?.tamper_detected ? "Warning" : (cameraIntegrity?.signal_quality || "Good")}
+              tone={cameraIntegrity?.tamper_detected ? "yellow" : "green"}
+            />
           </div>
         </div>
 
@@ -303,7 +390,7 @@ export default function MonitoringPage({ data = {} }) {
             <div className="summary-list">
               <p>
                 <span>Profile</span>
-                <strong>{formatSourceLabel(activeProfile)}</strong>
+                <strong>{currentSourceLabel}</strong>
               </p>
 
               <p>
@@ -358,6 +445,8 @@ export default function MonitoringPage({ data = {} }) {
               This does not identify faces. It uses anonymous body tracking to reduce double-counting.
             </div>
           </div>
+
+          <CameraIntegrityPanel health={cameraIntegrity} />
 
           <div className={`panel mini-panel incident-card ${incidentActive ? "incident-active" : "incident-safe"}`}>
             <p className="section-kicker">Incident</p>
@@ -414,47 +503,59 @@ export default function MonitoringPage({ data = {} }) {
       {presentationOpen &&
         createPortal(
           <div
-            className={`monitoring-presentation-overlay video-only-presentation ${streamLive ? "is-live" : "is-paused"}`}
+            className={`monitoring-presentation-overlay video-only-presentation ${streamLive ? "is-live" : "is-paused"} mode-${presentationMode} fit-${presentationFit}`}
             role="dialog"
             aria-modal="true"
-            aria-label="CrowdVision full screen video monitoring"
+            aria-label="CrowdVision fullscreen monitoring presentation"
           >
             <img
               src={VIDEO_STREAM_URL}
-              alt="CrowdVision full screen live monitoring"
+              alt="CrowdVision fullscreen live monitoring"
               className="presentation-video-only-feed"
               loading="eager"
               decoding="async"
             />
 
-            <div className="video-only-hud video-only-hud-left">
-              <span className={streamLive ? "hud-dot live" : "hud-dot paused"} />
-              <strong>{streamLive ? "LIVE MONITORING" : "MONITORING PAUSED"}</strong>
-              <small>{formatSourceLabel(activeProfile)}</small>
-            </div>
+            {presentationMode === "command" && (
+              <>
+                <div className="video-only-hud video-only-hud-left">
+                  <span className={streamLive ? "hud-dot live" : "hud-dot paused"} />
+                  <strong>{streamLive ? "LIVE MONITORING" : "MONITORING PAUSED"}</strong>
+                  <small>{currentSourceLabel}</small>
+                </div>
 
-            <div className="video-only-hud video-only-hud-bottom">
-              <p>
-                <span>People</span>
-                <strong>{peopleCount}</strong>
-              </p>
-              <p>
-                <span>Occupancy</span>
-                <strong>{occupancy}</strong>
-              </p>
-              <p>
-                <span>Density</span>
-                <strong className={`density-${densityTone}`}>{latestDensity}</strong>
-              </p>
-              <p>
-                <span>Unique Seen</span>
-                <strong>{sessionUniquePeople}</strong>
-              </p>
-              <p>
-                <span>Duplicates Blocked</span>
-                <strong>{duplicatesPrevented}</strong>
-              </p>
-            </div>
+                <div className="video-only-hud video-only-hud-bottom">
+                  <p>
+                    <span>People</span>
+                    <strong>{peopleCount}</strong>
+                  </p>
+                  <p>
+                    <span>Occupancy</span>
+                    <strong>{occupancy}</strong>
+                  </p>
+                  <p>
+                    <span>Density</span>
+                    <strong className={`density-${densityTone}`}>{latestDensity}</strong>
+                  </p>
+                  <p>
+                    <span>Unique Seen</span>
+                    <strong>{sessionUniquePeople}</strong>
+                  </p>
+                  <p>
+                    <span>Duplicates Blocked</span>
+                    <strong>{duplicatesPrevented}</strong>
+                  </p>
+                  <p>
+                    <span>Integrity</span>
+                    <strong>
+                      {cameraIntegrity?.tamper_detected
+                        ? "Warning"
+                        : cameraIntegrity?.signal_quality || "Good"}
+                    </strong>
+                  </p>
+                </div>
+              </>
+            )}
 
             {!streamLive && (
               <div className="video-only-paused-card">
@@ -464,9 +565,53 @@ export default function MonitoringPage({ data = {} }) {
               </div>
             )}
 
-            <button type="button" className="video-only-exit" onClick={closePresentationMode}>
-              Exit
-            </button>
+            <div className="video-only-toolbar">
+              <button
+                type="button"
+                className="video-only-tool-button"
+                onClick={() =>
+                  setPresentationMode((currentMode) =>
+                    currentMode === "clean" ? "command" : "clean"
+                  )
+                }
+                title="Shortcut: C for Clean, M for Command"
+              >
+                {presentationMode === "clean" ? "Command" : "Clean"}
+              </button>
+
+              <button
+                type="button"
+                className="video-only-tool-button"
+                onClick={() =>
+                  setPresentationFit((currentFit) =>
+                    currentFit === "fit" ? "fill" : "fit"
+                  )
+                }
+                title="Shortcut: F"
+              >
+                {presentationFit === "fit" ? "Fill" : "Fit"}
+              </button>
+
+              <button
+                type="button"
+                className="video-only-tool-button"
+                onClick={fetchDashboardData}
+                title="Shortcut: R"
+              >
+                Refresh
+              </button>
+
+              <button type="button" className="video-only-exit" onClick={closePresentationMode}>
+                Exit
+              </button>
+            </div>
+
+            <div className="video-only-shortcuts">
+              <span>C Clean</span>
+              <span>M Command</span>
+              <span>F Fit/Fill</span>
+              <span>Esc Exit</span>
+            </div>
           </div>,
           document.body
         )}

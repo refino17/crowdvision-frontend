@@ -26,6 +26,7 @@ export default function CameraHealthGrid({
     null;
 
   const activeTracking = activeCamera?.tracking || cameraHealth?.tracking || {};
+  const activeIntegrity = activeCamera?.camera_health || cameraHealth?.camera_health || {};
   const activeSource = formatSourceLabel(
     activeCamera?.name ||
     cameraHealth?.active_profile ||
@@ -63,6 +64,10 @@ export default function CameraHealthGrid({
           <span>Duplicates Blocked</span>
           <strong>{numberValue(activeTracking.duplicates_prevented)}</strong>
         </div>
+        <div>
+          <span>Integrity</span>
+          <strong>{activeIntegrity?.tamper_detected ? "Warning" : (activeIntegrity?.signal_quality || "Good")}</strong>
+        </div>
       </div>
 
       <div className="multi-camera-grid camera-grid-compact">
@@ -77,10 +82,12 @@ export default function CameraHealthGrid({
           const activeTracks = numberValue(tracking.active_tracks);
           const reidentifiedPeople = numberValue(tracking.reidentified_people);
           const duplicatesPrevented = numberValue(tracking.duplicates_prevented);
+          const integrity = camera.camera_health || {};
+          const tamperDetected = Boolean(integrity.tamper_detected);
 
           return (
             <article
-              className={`camera-tile source-tile ${isActive ? "active is-current" : ""} ${isOnline ? "online" : "standby"}`}
+              className={`camera-tile source-tile ${isActive ? "active is-current" : ""} ${isOnline ? "online" : "standby"} ${tamperDetected ? "tamper-warning" : ""}`}
               key={camera.key}
             >
               <div className="camera-tile-head">
@@ -136,6 +143,14 @@ export default function CameraHealthGrid({
 
                   <span>
                     FPS <strong>{camera.fps ?? 0}</strong>
+                  </span>
+
+                  <span>
+                    Integrity <strong>{tamperDetected ? "Warning" : (integrity.signal_quality || "Good")}</strong>
+                  </span>
+
+                  <span>
+                    Tamper <strong>{integrity.tamper_type || "None"}</strong>
                   </span>
                 </div>
 

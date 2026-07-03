@@ -917,13 +917,18 @@
   }
 }
 
-
 /* ==========================================================
-   CrowdVision AI Monitoring v42
-   True video-only fullscreen mode.
-   This overrides the earlier presentation deck so the live feed
-   covers the entire screen and hides the dashboard/sidebar.
+   CrowdVision AI Monitoring v43
+   Demo-grade full-screen mode.
+   - Clean View: only the camera feed, with tiny controls.
+   - Command View: camera feed + professional HUD metrics.
+   Keyboard shortcuts in fullscreen:
+   C = clean, M = command, F = fit/fill, R = refresh, Esc = exit.
    ========================================================== */
+
+.clean-presentation-button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)) !important;
+}
 
 .monitoring-presentation-overlay.video-only-presentation {
   position: fixed !important;
@@ -955,10 +960,24 @@
   object-fit: contain;
   object-position: center center;
   background: #000;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.video-only-presentation.fit-fill .presentation-video-only-feed {
+  object-fit: cover;
 }
 
 .video-only-presentation.is-paused .presentation-video-only-feed {
   filter: brightness(.68) saturate(.82) blur(1px);
+}
+
+.video-only-presentation.mode-clean .presentation-video-only-feed {
+  filter: none;
+}
+
+.video-only-presentation.mode-clean.is-paused .presentation-video-only-feed {
+  filter: brightness(.62) saturate(.84) blur(1px);
 }
 
 .video-only-presentation .video-only-hud {
@@ -1024,11 +1043,11 @@
   left: 50%;
   bottom: 22px;
   transform: translateX(-50%);
-  width: min(calc(100vw - 44px), 980px);
-  min-height: 72px;
+  width: min(calc(100vw - 44px), 1080px);
+  min-height: 74px;
   justify-content: center;
   padding: 12px;
-  border-radius: 22px;
+  border-radius: 24px;
 }
 
 .video-only-hud-bottom p {
@@ -1045,7 +1064,7 @@
 }
 
 .video-only-hud-bottom span {
-  color: rgba(230, 247, 241, .7);
+  color: rgba(230, 247, 241, .72);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: .18em;
@@ -1064,20 +1083,102 @@
 .video-only-hud-bottom .density-high { color: var(--gold); }
 .video-only-hud-bottom .density-critical { color: var(--danger); }
 
-.video-only-exit {
+.video-only-toolbar {
   position: absolute;
-  z-index: 7;
+  z-index: 8;
   top: 22px;
   right: 22px;
-  min-height: 46px;
-  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
   border-radius: 999px;
-  color: #fff !important;
-  background: rgba(255, 77, 95, .16) !important;
-  border: 1px solid rgba(255, 77, 95, .46) !important;
-  box-shadow: 0 18px 60px rgba(0,0,0,.42) !important;
+  border: 1px solid rgba(255,255,255,.14);
+  background: linear-gradient(135deg, rgba(1, 8, 6, .62), rgba(1, 12, 9, .42));
+  box-shadow: 0 18px 60px rgba(0,0,0,.42);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  transition: opacity .22s var(--ease), transform .22s var(--ease);
+}
+
+.video-only-presentation.mode-clean .video-only-toolbar {
+  opacity: .16;
+  transform: translateY(-3px);
+}
+
+.video-only-presentation.mode-clean:hover .video-only-toolbar,
+.video-only-presentation.mode-clean:focus-within .video-only-toolbar {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.video-only-tool-button,
+.video-only-exit {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.video-only-tool-button {
+  color: #eafff7 !important;
+  background: rgba(255,255,255,.07) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  box-shadow: none !important;
+}
+
+.video-only-tool-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 46%, rgba(255,255,255,.16)) !important;
+  background: color-mix(in srgb, var(--accent) 14%, rgba(255,255,255,.07)) !important;
+}
+
+.video-only-exit {
+  color: #fff !important;
+  background: rgba(255, 77, 95, .18) !important;
+  border: 1px solid rgba(255, 77, 95, .48) !important;
+  box-shadow: none !important;
+}
+
+.video-only-shortcuts {
+  position: absolute;
+  z-index: 6;
+  left: 22px;
+  bottom: 22px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  opacity: .78;
+  transition: opacity .22s var(--ease);
+}
+
+.video-only-presentation.mode-command .video-only-shortcuts {
+  bottom: 112px;
+}
+
+.video-only-presentation.mode-clean .video-only-shortcuts {
+  opacity: 0;
+}
+
+.video-only-presentation.mode-clean:hover .video-only-shortcuts {
+  opacity: .58;
+}
+
+.video-only-shortcuts span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: rgba(235, 250, 244, .82);
+  background: rgba(0,0,0,.42);
+  border: 1px solid rgba(255,255,255,.1);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .video-only-paused-card {
@@ -1095,6 +1196,12 @@
   box-shadow: 0 34px 110px rgba(0,0,0,.58);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+}
+
+.video-only-presentation.mode-clean .video-only-paused-card {
+  width: min(520px, calc(100vw - 40px));
+  padding: 24px;
+  opacity: .9;
 }
 
 .video-only-paused-card p {
@@ -1120,37 +1227,65 @@
   line-height: 1.55;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
+  .monitoring-head-actions {
+    justify-content: flex-start;
+  }
+
+  .video-only-toolbar {
+    top: 14px;
+    right: 14px;
+    max-width: calc(100vw - 28px);
+    overflow-x: auto;
+    border-radius: 22px;
+  }
+
+  .video-only-hud-left {
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    max-width: calc(100vw - 28px);
+  }
+
+  .video-only-presentation.mode-command .video-only-hud-left {
+    right: auto;
+    max-width: calc(100vw - 220px);
+  }
+
   .video-only-hud-bottom {
     justify-content: flex-start;
     overflow-x: auto;
+    bottom: 14px;
+    width: calc(100vw - 28px);
   }
 
   .video-only-hud-bottom p {
     min-width: 112px;
   }
+
+  .video-only-shortcuts {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
-  .video-only-hud-left {
-    right: 78px;
-    max-width: none;
-  }
-
-  .video-only-hud-left strong {
+  .video-only-presentation.mode-command .video-only-hud-left {
     display: none;
   }
 
+  .video-only-toolbar {
+    opacity: .94 !important;
+    transform: none !important;
+  }
+
+  .video-only-tool-button,
   .video-only-exit {
-    top: 18px;
-    right: 18px;
-    min-height: 42px;
-    padding: 0 14px;
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .video-only-hud-bottom {
-    bottom: 14px;
-    width: calc(100vw - 28px);
     min-height: 64px;
     border-radius: 18px;
   }
