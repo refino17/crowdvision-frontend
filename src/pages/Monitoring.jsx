@@ -265,7 +265,8 @@ export default function MonitoringPage({ data = {} }) {
       </section>
 
       <section className="monitoring-command-deck">
-        <div className="panel live-panel monitoring-feed monitoring-feed-hero">
+        <div className="monitoring-primary-column">
+          <div className="panel live-panel monitoring-feed monitoring-feed-hero">
           <SectionHead
             kicker="Live Monitoring"
             title="Camera Stream"
@@ -342,6 +343,13 @@ export default function MonitoringPage({ data = {} }) {
           </div>
         </div>
 
+          <CameraHealthGrid
+            cameraHealth={data.cameraHealth}
+            activeCameraProfile={data.activeCameraProfile}
+            switchCameraProfile={data.switchCameraProfile}
+          />
+        </div>
+
         <aside className="monitor-command-sidebar">
           <div className="panel mini-panel command-control-panel">
             <SectionHead
@@ -384,8 +392,8 @@ export default function MonitoringPage({ data = {} }) {
           </div>
 
           <div className="panel mini-panel snapshot-panel">
-            <p className="section-kicker">Live Metrics</p>
-            <h2>Current Snapshot</h2>
+            <p className="section-kicker">{engineRunning ? "Live Metrics" : "Last Recorded"}</p>
+            <h2>{engineRunning ? "Current Snapshot" : "Session Snapshot"}</h2>
 
             <div className="summary-list">
               <p>
@@ -411,8 +419,8 @@ export default function MonitoringPage({ data = {} }) {
               </p>
 
               <p>
-                <span>Alert</span>
-                <strong>{alertMessage}</strong>
+                <span>{engineRunning ? "Alert" : "Last Alert"}</span>
+                <strong>{engineRunning ? alertMessage : "Monitoring paused. Showing the last recorded session values."}</strong>
               </p>
             </div>
           </div>
@@ -493,12 +501,6 @@ export default function MonitoringPage({ data = {} }) {
           </div>
         </aside>
       </section>
-
-      <CameraHealthGrid
-        cameraHealth={data.cameraHealth}
-        activeCameraProfile={data.activeCameraProfile}
-        switchCameraProfile={data.switchCameraProfile}
-      />
 
       {presentationOpen &&
         createPortal(

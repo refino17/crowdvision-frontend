@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import "./styles/index.css";
+import "./styles/v44-system-cleanup.css";
 
 import { API_BASE_URL, DASHBOARD_REFRESH_MS } from "./config/constants";
 import MainLayout from "./layouts/MainLayout";
@@ -149,13 +150,13 @@ function AppShell() {
       formData.append("device_index", deviceIndex || "0");
       formData.append("source_type", newSourceType);
       const response = await fetch(`${API_BASE_URL}/api/sources/device`, { method: "POST", body: formData });
-      if (!response.ok) throw new Error(`Source creation failed: ${response.status}`);
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || data.message || `Source creation failed: ${response.status}`);
       setSourceMessage(engineStatus.running ? `${data.message}. Restart monitoring to use it.` : `${data.message}. Start monitoring when ready.`);
       fetchDashboardData();
     } catch (error) {
       console.error(error);
-      setSourceMessage("Unable to create device source.");
+      setSourceMessage(error.message || "Unable to create device source.");
     }
   }
 

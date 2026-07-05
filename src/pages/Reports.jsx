@@ -6,13 +6,14 @@ import "../styles/reports-v32.css";
 
 function normalizeReportType(type = "") {
   const value = String(type || "report").toLowerCase();
+  if (value.includes("camera") || value.includes("tamper") || value.includes("integrity")) return "Camera Integrity";
   if (value.includes("incident")) return "Incident";
   if (value.includes("anomaly")) return "Anomaly";
-  return "Report";
+  return "General";
 }
 
 function reportKindClass(type = "") {
-  return normalizeReportType(type).toLowerCase();
+  return normalizeReportType(type).toLowerCase().replaceAll(" ", "-");
 }
 
 function formatBytes(bytes) {
@@ -25,6 +26,7 @@ function formatBytes(bytes) {
 
 function friendlyReportName(filename = "") {
   const raw = String(filename || "Report").replace(/\.txt$/i, "");
+  if (raw.includes("camera_health_report")) return raw.replace("camera_health_report_", "Camera Integrity #");
   if (raw.includes("incident_report")) return raw.replace("incident_report_", "Incident #");
   if (raw.includes("anomaly_report")) return raw.replace("anomaly_report_", "Anomaly #");
   return raw.replace(/_/g, " ");
@@ -89,6 +91,7 @@ function parseReportContent(content = "") {
   const anomalyZone = extractField(content, "Anomaly Zone");
   const generatedAt = extractField(content, "Generated At");
   const cameraProfile = extractField(content, "Camera Profile");
+  const tamperType = extractField(content, "Tamper Type");
 
   return {
     reportType,
@@ -103,6 +106,7 @@ function parseReportContent(content = "") {
     anomalyType: extractField(content, "Anomaly Type"),
     anomalyScore,
     severity,
+    tamperType,
     primaryZone: dangerZone !== "—" ? dangerZone : anomalyZone,
     severityScore: severity !== "—" ? severity : anomalyScore,
     action: extractField(content, "Recommended Action"),
@@ -119,6 +123,11 @@ function ReportMetric({ label, value }) {
   );
 }
 
+function ReportTypeBadge({ type }) {
+  const normalized = normalizeReportType(type);
+  return <Badge value={normalized} type={reportKindClass(normalized)} />;
+}
+
 function ReportRecord({ report, selected, onPreview }) {
   const type = normalizeReportType(report.type);
 
@@ -131,7 +140,7 @@ function ReportRecord({ report, selected, onPreview }) {
         title={report.filename}
       >
         <span className="report-console-record-top">
-          <Badge value={type} type={type} />
+          <ReportTypeBadge type={type} />
           <small>{formatBytes(report.size)}</small>
         </span>
         <strong>{friendlyReportName(report.filename)}</strong>
@@ -139,19 +148,9 @@ function ReportRecord({ report, selected, onPreview }) {
       </button>
 
       <div className="report-console-record-actions">
-        <button type="button" onClick={() => onPreview(report)}>
-          Inspect
-        </button>
-        {report.url && (
-          <a href={report.url} target="_blank" rel="noreferrer">
-            TXT
-          </a>
-        )}
-        {report.pdf_url && (
-          <a href={report.pdf_url} target="_blank" rel="noreferrer" className="pdf-link">
-            PDF
-          </a>
-        )}
+        <button type="button" onClick={() => onPreview(report)}>Inspect</button>
+        {report.url && <a href={report.url} target="_blank" rel="noreferrer">TXT</a>}
+        {report.pdf_url && <a href={report.pdf_url} target="_blank" rel="noreferrer" className="pdf-link">PDF</a>}
       </div>
     </article>
   );
@@ -170,18 +169,21 @@ export default function ReportsPage({ data }) {
   const [previewFilename, setPreviewFilename] = useState("");
   const [isOpening, setIsOpening] = useState(false);
 
-  const sortedReports = useMemo(() => {
-    return [...reports].sort((a, b) => String(b.created || "").localeCompare(String(a.created || "")));
-  }, [reports]);
+  const sortedReports = useMemo(
+    () => [...reports].sort((a, b) => String(b.created || "").localeCompare(String(a.created || ""))),
+    [reports]
+  );
 
   const reportStats = useMemo(() => {
     const incidents = sortedReports.filter((report) => normalizeReportType(report.type) === "Incident").length;
     const anomalies = sortedReports.filter((report) => normalizeReportType(report.type) === "Anomaly").length;
+    const cameraIntegrity = sortedReports.filter((report) => normalizeReportType(report.type) === "Camera Integrity").length;
 
     return {
       total: sortedReports.length,
       incidents,
       anomalies,
+      cameraIntegrity,
       latest: sortedReports[0]?.created || "No report yet",
     };
   }, [sortedReports]);
@@ -203,7 +205,6 @@ export default function ReportsPage({ data }) {
       const matchesSearch = !search || [report.filename, report.created, report.type]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(search));
-
       return matchesFilter && matchesSearch;
     });
   }, [sortedReports, filter, query]);
@@ -244,7 +245,7 @@ export default function ReportsPage({ data }) {
         <p className="section-kicker">Investigation Command</p>
         <h1>Report Intelligence Center</h1>
         <p>
-          Review generated incident and anomaly evidence in a clean investigation desk.
+          Review incident, anomaly, and camera-integrity evidence in one investigation desk.
           The report registry remains visible while the selected record opens beside it.
         </p>
       </section>
@@ -253,7 +254,7 @@ export default function ReportsPage({ data }) {
         <StatCard label="Total Reports" value={reportStats.total} />
         <StatCard label="Incident Records" value={reportStats.incidents} variant="warning" />
         <StatCard label="Anomaly Records" value={reportStats.anomalies} variant="danger" />
-        <StatCard label="Latest Generated" value={reportStats.latest} />
+        <StatCard label="Camera Integrity" value={reportStats.cameraIntegrity} variant="cyan" />
       </section>
 
       <section className="panel report-console-shell">
@@ -262,10 +263,9 @@ export default function ReportsPage({ data }) {
             <p className="section-kicker">Evidence Desk</p>
             <h2>Investigation Registry</h2>
             <span>Search, inspect, preview, and export generated CrowdVision evidence records.</span>
+            <small className="v44-report-latest">Latest generated: {reportStats.latest}</small>
           </div>
-          <button type="button" className="report-console-refresh" onClick={fetchDashboardData}>
-            Refresh Reports
-          </button>
+          <button type="button" className="report-console-refresh" onClick={fetchDashboardData}>Refresh Reports</button>
         </div>
 
         <div className="report-console-toolbar">
@@ -284,6 +284,7 @@ export default function ReportsPage({ data }) {
               ["All", reportStats.total],
               ["Incident", reportStats.incidents],
               ["Anomaly", reportStats.anomalies],
+              ["Camera Integrity", reportStats.cameraIntegrity],
             ].map(([item, count]) => (
               <button
                 key={item}
@@ -291,8 +292,7 @@ export default function ReportsPage({ data }) {
                 className={filter === item ? "active" : ""}
                 onClick={() => setFilter(item)}
               >
-                <span>{item}</span>
-                <strong>{count}</strong>
+                {item} <strong>{count}</strong>
               </button>
             ))}
           </div>
@@ -300,8 +300,8 @@ export default function ReportsPage({ data }) {
 
         {!hasReports ? (
           <div className="report-console-empty">
-            <strong>No reports generated yet.</strong>
-            <span>Start monitoring. CrowdVision will create reports when incidents or anomalies are detected.</span>
+            <strong>No reports yet.</strong>
+            <span>Start monitoring. CrowdVision will create reports when safety events or camera-integrity issues are recorded.</span>
           </div>
         ) : (
           <div className="report-console-workbench">
@@ -311,9 +311,7 @@ export default function ReportsPage({ data }) {
                   <span>Report queue</span>
                   <strong>{filteredReports.length} visible records</strong>
                 </div>
-                {(query || filter !== "All") && (
-                  <button type="button" onClick={clearSearch}>Clear</button>
-                )}
+                {(query || filter !== "All") && <button type="button" onClick={clearSearch}>Clear</button>}
               </div>
 
               {filteredReports.length === 0 ? (
@@ -350,7 +348,7 @@ export default function ReportsPage({ data }) {
                       <h2>{friendlyReportName(activeReport.filename)}</h2>
                       <span>{compactFilename(activeReport.filename)}</span>
                     </div>
-                    <Badge value={selectedType} type={selectedType} />
+                    <ReportTypeBadge type={selectedType} />
                   </div>
 
                   <div className="report-console-dossier">
@@ -366,7 +364,10 @@ export default function ReportsPage({ data }) {
                     <ReportMetric label="Occupancy" value={activeDetails.occupancy} />
                     <ReportMetric label="Density" value={activeDetails.density} />
                     <ReportMetric label="Zone" value={activeDetails.primaryZone} />
-                    <ReportMetric label="Severity / Score" value={activeDetails.severityScore} />
+                    <ReportMetric
+                      label={selectedType === "Camera Integrity" ? "Integrity Issue" : "Severity / Score"}
+                      value={selectedType === "Camera Integrity" ? activeDetails.tamperType : activeDetails.severityScore}
+                    />
                   </div>
 
                   <div className="report-console-action-card">
