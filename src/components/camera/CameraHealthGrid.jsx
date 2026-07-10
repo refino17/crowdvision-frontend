@@ -14,12 +14,81 @@ function compactStatus(isActive, isOnline, health) {
   return health || "Standby";
 }
 
+
+const LEGACY_MAIN_SOURCE_KEYS = new Set(["webcam", "crowd_video"]);
+
+function sourceSignature(camera = {}) {
+  const source = String(camera?.source ?? "").trim();
+  const sourceType = String(camera?.source_type || "camera").toLowerCase();
+
+  if (/^-?\d+$/.test(source) || ["webcam", "usb_camera"].includes(sourceType)) {
+    return `device:${source}`;
+  }
+
+  if (["phone_camera", "ip_camera", "rtsp_camera", "drone_stream"].includes(sourceType)) {
+    return `stream:${source.replace(/\/+$/, "").toLowerCase()}`;
+  }
+
+  return `source:${source.toLowerCase()}`;
+}
+
+function operatorCameraSources(cameras = [], activeProfile = "") {
+  const groups = new Map();
+
+  (cameras || []).forEach((camera) => {
+    const signature = sourceSignature(camera);
+    const items = groups.get(signature) || [];
+    items.push(camera);
+    groups.set(signature, items);
+  });
+
+  const visible = [];
+
+  groups.forEach((items) => {
+    const sorted = [...items].sort((left, right) => {
+      const leftActive = Boolean(left?.active || left?.key === activeProfile);
+      const rightActive = Boolean(right?.active || right?.key === activeProfile);
+
+      if (leftActive !== rightActive) return leftActive ? -1 : 1;
+
+      const leftLegacy = LEGACY_MAIN_SOURCE_KEYS.has(String(left?.key || ""));
+      const rightLegacy = LEGACY_MAIN_SOURCE_KEYS.has(String(right?.key || ""));
+
+      if (leftLegacy !== rightLegacy) return leftLegacy ? 1 : -1;
+
+      return String(left?.name || "").localeCompare(String(right?.name || ""));
+    });
+
+    const selected = sorted[0];
+    const selectedActive = Boolean(selected?.active || selected?.key === activeProfile);
+
+    if (
+      LEGACY_MAIN_SOURCE_KEYS.has(String(selected?.key || "")) &&
+      !selectedActive
+    ) {
+      return;
+    }
+
+    visible.push(selected);
+  });
+
+  return visible.sort((left, right) => {
+    const leftActive = Boolean(left?.active || left?.key === activeProfile);
+    const rightActive = Boolean(right?.active || right?.key === activeProfile);
+
+    if (leftActive !== rightActive) return leftActive ? -1 : 1;
+
+    return String(left?.name || "").localeCompare(String(right?.name || ""));
+  });
+}
+
 export default function CameraHealthGrid({
   cameraHealth,
   activeCameraProfile,
   switchCameraProfile
 }) {
   const cameras = cameraHealth?.cameras || [];
+  const visibleCameras = operatorCameraSources(cameras, activeCameraProfile);
   const activeCamera =
     cameras.find((camera) => camera.active) ||
     cameras.find((camera) => camera.key === activeCameraProfile) ||
@@ -54,11 +123,11 @@ export default function CameraHealthGrid({
         </div>
         <div>
           <span>Online Cameras</span>
-          <strong>{cameras.filter((camera) => camera.online).length}</strong>
+          <strong>{visibleCameras.filter((camera) => camera.online).length}</strong>
         </div>
         <div>
           <span>Total Sources</span>
-          <strong>{cameras.length}</strong>
+          <strong>{visibleCameras.length}</strong>
         </div>
         <div>
           <span>Duplicates Blocked</span>
@@ -71,7 +140,7 @@ export default function CameraHealthGrid({
       </div>
 
       <div className="multi-camera-grid camera-grid-compact">
-        {cameras.slice(0, 8).map((camera) => {
+        {visibleCameras.slice(0, 8).map((camera) => {
           const isActive = Boolean(camera.active || camera.key === activeCameraProfile);
           const isOnline = Boolean(camera.online);
           const hasPreview = Boolean(camera.preview_url);

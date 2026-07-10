@@ -165,8 +165,8 @@ export default function MonitoringPage({ data = {} }) {
   const trackingQuality = safeText(tracking?.tracking_quality, "Waiting");
   const privacyMode = safeText(tracking?.privacy_mode, "Anonymous body tracking");
 
-  const incidentActive = Boolean(latestIncident);
-  const anomalyActive = Boolean(latestAnomaly);
+  const incidentActive = engineRunning && Boolean(latestIncident);
+  const anomalyActive = engineRunning && Boolean(latestAnomaly);
 
   async function openPresentationMode(mode = "command") {
     setPresentationMode(mode);
@@ -463,17 +463,23 @@ export default function MonitoringPage({ data = {} }) {
             <div className="summary-list">
               <p>
                 <span>Zone</span>
-                <strong>{latestIncident?.danger_zone || "None"}</strong>
+                <strong>{incidentActive ? latestIncident?.danger_zone || "None" : "None"}</strong>
               </p>
 
               <p>
                 <span>Duration</span>
-                <strong>{latestIncident?.incident_duration ?? 0}s</strong>
+                <strong>{incidentActive ? `${latestIncident?.incident_duration ?? 0}s` : "0s"}</strong>
               </p>
 
               <p>
                 <span>Action</span>
-                <strong>{latestIncident?.recommendation || "Monitor"}</strong>
+                <strong>
+                  {incidentActive
+                    ? latestIncident?.recommendation || "Monitor"
+                    : engineRunning
+                      ? "Continue monitoring"
+                      : "Start monitoring when ready"}
+                </strong>
               </p>
             </div>
           </div>
@@ -485,17 +491,23 @@ export default function MonitoringPage({ data = {} }) {
             <div className="summary-list">
               <p>
                 <span>Type</span>
-                <strong>{latestAnomaly?.anomaly_type || "Normal"}</strong>
+                <strong>{anomalyActive ? latestAnomaly?.anomaly_type || "Normal" : "Normal"}</strong>
               </p>
 
               <p>
                 <span>Score</span>
-                <strong>{latestAnomaly?.anomaly_score ?? 0}%</strong>
+                <strong>{anomalyActive ? `${latestAnomaly?.anomaly_score ?? 0}%` : "0%"}</strong>
               </p>
 
               <p>
                 <span>Prediction</span>
-                <strong>{prediction?.forecast_message || "No forecast"}</strong>
+                <strong>
+                  {anomalyActive
+                    ? prediction?.forecast_message || "Monitor"
+                    : engineRunning
+                      ? "No active anomaly"
+                      : "Monitoring is paused"}
+                </strong>
               </p>
             </div>
           </div>

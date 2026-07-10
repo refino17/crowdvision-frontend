@@ -4,11 +4,34 @@ import StatCard from "../components/common/StatCard";
 import { formatSourceLabel } from "../utils/display";
 import "../styles/reports-v32.css";
 
-function normalizeReportType(type = "") {
-  const value = String(type || "report").toLowerCase();
-  if (value.includes("camera") || value.includes("tamper") || value.includes("integrity")) return "Camera Integrity";
-  if (value.includes("incident")) return "Incident";
-  if (value.includes("anomaly")) return "Anomaly";
+function normalizeReportType(type = "", filename = "") {
+  const filenameValue = String(filename || "").toLowerCase();
+  const typeValue = String(type || "").toLowerCase();
+
+  // Filename is the strongest signal because older API responses may still
+  // carry a stale generic type in frontend state.
+  if (
+    filenameValue.includes("camera_health") ||
+    filenameValue.includes("camera_integrity") ||
+    filenameValue.includes("tamper")
+  ) {
+    return "Camera Integrity";
+  }
+
+  if (filenameValue.includes("incident")) return "Incident";
+  if (filenameValue.includes("anomaly")) return "Anomaly";
+
+  if (
+    typeValue.includes("camera") ||
+    typeValue.includes("tamper") ||
+    typeValue.includes("integrity")
+  ) {
+    return "Camera Integrity";
+  }
+
+  if (typeValue.includes("incident")) return "Incident";
+  if (typeValue.includes("anomaly")) return "Anomaly";
+
   return "General";
 }
 
@@ -129,7 +152,7 @@ function ReportTypeBadge({ type }) {
 }
 
 function ReportRecord({ report, selected, onPreview }) {
-  const type = normalizeReportType(report.type);
+  const type = normalizeReportType(report.type, report.filename);
 
   return (
     <article className={`report-console-record ${reportKindClass(type)} ${selected ? "selected" : ""}`}>
@@ -175,9 +198,9 @@ export default function ReportsPage({ data }) {
   );
 
   const reportStats = useMemo(() => {
-    const incidents = sortedReports.filter((report) => normalizeReportType(report.type) === "Incident").length;
-    const anomalies = sortedReports.filter((report) => normalizeReportType(report.type) === "Anomaly").length;
-    const cameraIntegrity = sortedReports.filter((report) => normalizeReportType(report.type) === "Camera Integrity").length;
+    const incidents = sortedReports.filter((report) => normalizeReportType(report.type, report.filename) === "Incident").length;
+    const anomalies = sortedReports.filter((report) => normalizeReportType(report.type, report.filename) === "Anomaly").length;
+    const cameraIntegrity = sortedReports.filter((report) => normalizeReportType(report.type, report.filename) === "Camera Integrity").length;
 
     return {
       total: sortedReports.length,
@@ -200,9 +223,14 @@ export default function ReportsPage({ data }) {
     const search = query.trim().toLowerCase();
 
     return sortedReports.filter((report) => {
-      const type = normalizeReportType(report.type);
+      const type = normalizeReportType(report.type, report.filename);
       const matchesFilter = filter === "All" || type === filter;
-      const matchesSearch = !search || [report.filename, report.created, report.type]
+      const matchesSearch = !search || [
+        report.filename,
+        report.created,
+        report.type,
+        normalizeReportType(report.type, report.filename),
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(search));
       return matchesFilter && matchesSearch;
@@ -235,7 +263,7 @@ export default function ReportsPage({ data }) {
   }
 
   const hasReports = sortedReports.length > 0;
-  const selectedType = normalizeReportType(activeReport?.type);
+  const selectedType = normalizeReportType(activeReport?.type, activeReport?.filename);
   const readableSource = safeValue(activeDetails.cameraProfile, "CrowdVision");
   const loading = isOpening || activeDetails.isLoading;
 

@@ -6,7 +6,7 @@ import TablePanel from "../components/tables/TablePanel";
 import { API_BASE_URL } from "../config/constants";
 import { formatSourceLabel } from "../utils/display";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
 export default function IncidentsPage({ data }) {
   const {
@@ -27,7 +27,7 @@ export default function IncidentsPage({ data }) {
   const [error, setError] = useState("");
 
   const monitoringRunning = Boolean(engineStatus?.running);
-  const hasActiveIncident = Boolean(latestIncident);
+  const hasActiveIncident = monitoringRunning && Boolean(latestIncident);
 
   async function fetchIncidentHistory(targetPage = page) {
     try {

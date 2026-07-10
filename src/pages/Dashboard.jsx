@@ -129,8 +129,8 @@ export default function DashboardPage({ data }) {
 
   const monitoringRunning = Boolean(engineStatus?.running);
   const latestDensity = latestEvent?.density_level || "Unknown";
-  const hasActiveIncident = Boolean(latestIncident);
-  const hasActiveAnomaly = Boolean(latestAnomaly);
+  const hasActiveIncident = monitoringRunning && Boolean(latestIncident);
+  const hasActiveAnomaly = monitoringRunning && Boolean(latestAnomaly);
   const hasIncidentHistory = Number(incidentSummary?.total_incident_events || 0) > 0;
   const hasAnomalyHistory = Number(anomalySummary?.total_anomalies || 0) > 0;
   const riskTrend = prediction?.risk_trend || "Stable";
@@ -225,7 +225,7 @@ export default function DashboardPage({ data }) {
           <h2>{hasActiveAnomaly ? "Anomaly Detected" : "No Active Anomaly"}</h2>
           <div className="incident-status">
             <span>Status</span>
-            <strong>{hasActiveAnomaly ? "ANOMALY" : "NORMAL"}</strong>
+            <strong>{hasActiveAnomaly ? "ANOMALY" : monitoringRunning ? "NORMAL" : "PAUSED"}</strong>
           </div>
           <div className="summary-list">
             {hasActiveAnomaly ? (

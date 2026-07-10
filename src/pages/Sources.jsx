@@ -104,6 +104,77 @@ function isInternalTestCamera(worker) {
   return id === "manual_test" || name === "manual test" || source === "test";
 }
 
+
+const LEGACY_MAIN_SOURCE_KEYS = new Set(["webcam", "crowd_video"]);
+
+function mainSourceSignature(profile = {}) {
+  const source = String(profile?.source ?? "").trim();
+  const sourceType = String(profile?.source_type || "camera").toLowerCase();
+
+  if (/^-?\d+$/.test(source) || ["webcam", "usb_camera"].includes(sourceType)) {
+    return `device:${source}`;
+  }
+
+  if (["phone_camera", "ip_camera", "rtsp_camera", "drone_stream"].includes(sourceType)) {
+    return `stream:${source.replace(/\/+$/, "").toLowerCase()}`;
+  }
+
+  return `source:${source.toLowerCase()}`;
+}
+
+function operatorMainSources(profiles = [], activeProfile = "") {
+  const groups = new Map();
+
+  (profiles || []).forEach((profile) => {
+    const signature = mainSourceSignature(profile);
+    const items = groups.get(signature) || [];
+    items.push(profile);
+    groups.set(signature, items);
+  });
+
+  const visible = [];
+
+  groups.forEach((items) => {
+    const sorted = [...items].sort((left, right) => {
+      const leftActive = Boolean(left?.active || left?.key === activeProfile);
+      const rightActive = Boolean(right?.active || right?.key === activeProfile);
+
+      if (leftActive !== rightActive) return leftActive ? -1 : 1;
+
+      const leftLegacy = LEGACY_MAIN_SOURCE_KEYS.has(String(left?.key || ""));
+      const rightLegacy = LEGACY_MAIN_SOURCE_KEYS.has(String(right?.key || ""));
+
+      if (leftLegacy !== rightLegacy) return leftLegacy ? 1 : -1;
+
+      return String(right?.created_at || "").localeCompare(String(left?.created_at || ""));
+    });
+
+    const selected = sorted[0];
+    const selectedActive = Boolean(selected?.active || selected?.key === activeProfile);
+
+    // The original built-in webcam and crowd-video presets remain available
+    // internally as fallbacks, but operators should not see unused presets
+    // after saved sources have been created.
+    if (
+      LEGACY_MAIN_SOURCE_KEYS.has(String(selected?.key || "")) &&
+      !selectedActive
+    ) {
+      return;
+    }
+
+    visible.push(selected);
+  });
+
+  return visible.sort((left, right) => {
+    const leftActive = Boolean(left?.active || left?.key === activeProfile);
+    const rightActive = Boolean(right?.active || right?.key === activeProfile);
+
+    if (leftActive !== rightActive) return leftActive ? -1 : 1;
+
+    return String(left?.name || "").localeCompare(String(right?.name || ""));
+  });
+}
+
 function EdgeBadge({ value, tone = "default" }) {
   return <span className={`edge-badge tone-${tone}`}>{value}</span>;
 }
@@ -557,6 +628,11 @@ export default function SourcesPage({ data = {} }) {
     fetchDashboardData,
   } = data;
 
+  const visibleCameraProfiles = useMemo(
+    () => operatorMainSources(cameraProfiles, activeCameraProfile),
+    [cameraProfiles, activeCameraProfile]
+  );
+
   function updateSourceType(value) {
     setNewSourceType?.(value);
 
@@ -707,7 +783,7 @@ export default function SourcesPage({ data = {} }) {
         {profileMessage && <div className="profile-message">{profileMessage}</div>}
 
         <div className="source-list">
-          {(cameraProfiles || []).map((profile) => (
+          {visibleCameraProfiles.map((profile) => (
             <article className={`source-card ${profile.active ? "active" : ""}`} key={profile.key}>
               <div>
                 <span>{formatSourceLabel(profile.source_type || "camera")}</span>

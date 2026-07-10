@@ -8,6 +8,8 @@ import {
 
 import "./styles/index.css";
 import "./styles/v44-system-cleanup.css";
+import "./styles/v45-adaptive-navigation.css";
+import "./styles/v45_1-mobile-command-shell.css";
 
 import { API_BASE_URL, DASHBOARD_REFRESH_MS } from "./config/constants";
 import MainLayout from "./layouts/MainLayout";

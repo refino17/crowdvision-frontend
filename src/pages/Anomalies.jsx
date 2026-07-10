@@ -14,7 +14,7 @@ export default function AnomaliesPage({ data }) {
   } = data;
 
   const monitoringRunning = Boolean(engineStatus?.running);
-  const hasActiveAnomaly = Boolean(latestAnomaly);
+  const hasActiveAnomaly = monitoringRunning && Boolean(latestAnomaly);
 
   return (
     <>
