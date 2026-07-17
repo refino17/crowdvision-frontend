@@ -10,6 +10,7 @@ import "./styles/index.css";
 import "./styles/v44-system-cleanup.css";
 import "./styles/v45-adaptive-navigation.css";
 import "./styles/v45_1-mobile-command-shell.css";
+import "./styles/v46-security-audit.css";
 
 import { API_BASE_URL, DASHBOARD_REFRESH_MS } from "./config/constants";
 import MainLayout from "./layouts/MainLayout";
@@ -24,6 +25,7 @@ import ReportsPage from "./pages/Reports";
 import LaunchPage from "./pages/Launch";
 import EvidencePage from "./pages/Evidence";
 import SettingsPage from "./pages/Settings";
+import AuditPage from "./pages/Audit";
 import EventsPage from "./pages/Events";
 import ExportsPanel from "./pages/Exports";
 
@@ -284,6 +286,7 @@ function AppShell() {
       <Route path="/analytics" element={withLayout(<AnalyticsPage data={data} />)} />
       <Route path="/reports" element={withLayout(<ReportsPage data={data} />)} />
       <Route path="/evidence" element={withLayout(<EvidencePage data={data} />)} />
+      <Route path="/audit" element={withLayout(<AuditPage data={data} />)} />
       <Route path="/settings" element={withLayout(<SettingsPage data={data} />)} />
       <Route path="/exports" element={withLayout(<ExportsPanel />)} />
       <Route path="/events" element={withLayout(<EventsPage data={data} />)} />

@@ -27,7 +27,7 @@ const navSections = [
   },
   {
     label: "System",
-    items: [["/settings", "Settings", "⚙"]],
+    items: [["/audit", "Audit Center", "◎"], ["/settings", "Settings", "⚙"]],
   },
 ];
 

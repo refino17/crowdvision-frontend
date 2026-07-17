@@ -10,6 +10,7 @@ const PAGE_LABELS = {
   analytics: "Analytics Studio",
   reports: "Investigation Reports",
   evidence: "Evidence Vault",
+  audit: "Audit Center",
   settings: "System Control",
   events: "Event Stream",
   exports: "Export Center",
